@@ -71,7 +71,7 @@ export const saveQuestionnaireStep = async (
   try {
     const { sessionId, step, category, data } = req.body;
     
-    // Validate required fields
+    
     if (!sessionId || !step || !category || !data) {
       res.status(400).json({
         success: false,
@@ -90,7 +90,7 @@ export const saveQuestionnaireStep = async (
     
     
     switch (category) {
-      case 'basic':
+      case 'profile':
         user.location = data.location;
         user.householdSize = data.householdSize;
         break;
@@ -115,7 +115,7 @@ export const saveQuestionnaireStep = async (
           error: 'Invalid category',
           timestamp: new Date().toISOString()
         });
-        return;
+      return;
     }
     
     await user.save();

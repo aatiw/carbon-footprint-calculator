@@ -41,13 +41,12 @@ export const calculateFootprint = async (
     
     const footprint = new CarbonFootprint({
       sessionId,
-      userId: user._id,
       totalEmissions,
       emissions,
       comparisons: {
         localAverage: getLocalAverage(user.location.country),
         nationalAverage: getNationalAverage(user.location.country),
-        globalTarget: 2000, // 2 tons CO2e per year (Paris Agreement target)
+        globalTarget: 2000, 
         percentile: calculatePercentile(totalEmissions, user.location.country)
       },
       calculatedAt: new Date()
@@ -89,8 +88,7 @@ export const getFootprintDetails = async (
     const { sessionId } = req.params;
     
     const footprint = await CarbonFootprint.findOne({ sessionId })
-      .sort({ calculatedAt: -1 })
-      .populate('userId');
+      .sort({ calculatedAt: -1 });
     
     if (!footprint) {
       res.status(404).json({
@@ -372,7 +370,6 @@ function calculateShoppingEmissions(shopping: any): any {
 }
 
 function getLocalAverage(country: string): number {
-  // Country-specific averages (kg CO2e per year)
   const averages: { [key: string]: number } = {
     usa: 16000,
     uk: 8500,

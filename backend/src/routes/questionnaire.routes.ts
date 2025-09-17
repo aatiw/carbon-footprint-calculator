@@ -9,15 +9,15 @@ import {
 
 const router: Router = express.Router();
 
-// Session management
+
 router.post('/session/create', createSession);
 router.get('/session/:sessionId', getSessionData);
 
-// Questionnaire steps
+
 router.post('/step', saveQuestionnaireStep);
 router.get('/progress/:sessionId', getQuestionnaireProgress);
 
-// Final submission
+
 router.post('/submit', submitQuestionnaire);
 
 export default router;

@@ -6,6 +6,9 @@ import compression from 'compression';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database.js';
 
+import questionnaireRoutes from './routes/questionnaire.routes';
+import analysisRoutes from './routes/analysis.routes';
+import dashboardRoutes from './routes/dashboard.routes';
 
 
 const app: Express = express();
@@ -42,22 +45,19 @@ app.get('/', (req: Request, res: Response) => {
   });
 });
 
+
+
+app.use('/api/questionnaire', questionnaireRoutes);
+app.use('/api/analysis', analysisRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+
+
+
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ error: err.message,
     message: "Error in app use handler in index.ts"
    });
 });
-
-// API Routes (to be imported)
-// import questionnaireRoutes from './routes/questionnaire.routes';
-// import analysisRoutes from './routes/analysis.routes';
-// import dashboardRoutes from './routes/dashboard.routes';
-
-// app.use('/api/questionnaire', questionnaireRoutes);
-// app.use('/api/analysis', analysisRoutes);
-// app.use('/api/dashboard', dashboardRoutes);
-
-
 
 
 
