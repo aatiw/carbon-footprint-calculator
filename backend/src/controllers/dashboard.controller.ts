@@ -160,6 +160,7 @@ export const getChartData = async (
     
     res.json(response);
   } catch (error) {
+    console.error("error in getChartData", error);
     next(error);
   }
 };

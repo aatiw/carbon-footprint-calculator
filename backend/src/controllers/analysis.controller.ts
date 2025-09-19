@@ -128,6 +128,7 @@ export const getFootprintDetails = async (
     
     res.json(response);
   } catch (error) {
+    console.error("error in getFootprintDetails", error);
     next(error);
   }
 };
@@ -220,6 +221,7 @@ export const compareWithBenchmarks = async (
     
     res.json(response);
   } catch (error) {
+    console.error("eeror in compareWithBenchmarks", error);
     next(error);
   }
 };

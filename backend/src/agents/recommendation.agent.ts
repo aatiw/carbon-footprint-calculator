@@ -18,17 +18,6 @@ export interface Recommendation {
   considerations: string[];
 }
 
-export interface Scenario {
-  name: string;
-  description: string;
-  timeframe: string;
-  newTotal: number;
-  reduction: number;
-  reductionPercent: number;
-  actions: string[];
-  feasibility: number;
-  cost: 'free' | 'low' | 'medium' | 'high';
-}
 
 export class RecommendationAgent extends BaseAgent {
   constructor() {

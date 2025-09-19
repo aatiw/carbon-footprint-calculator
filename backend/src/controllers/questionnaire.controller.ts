@@ -4,7 +4,6 @@ import { type ApiResponse } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 
-
 export const createSession = async (
   req: Request,
   res: Response,
@@ -26,6 +25,7 @@ export const createSession = async (
     
     res.status(201).json(response);
   } catch (error) {
+    console.error("error in createSession", error);
     next(error);
   }
 };
@@ -58,6 +58,7 @@ export const getSessionData = async (
     
     res.json(response);
   } catch (error) {
+    console.error("error in getSessionData", error)
     next(error);
   }
 };
@@ -134,6 +135,7 @@ export const saveQuestionnaireStep = async (
     
     res.json(response);
   } catch (error) {
+    console.error("error in saveQuestionnaireSteps", error);
     next(error);
   }
 };
@@ -187,10 +189,10 @@ export const getQuestionnaireProgress = async (
     
     res.json(response);
   } catch (error) {
+    console.error("error in getQuestionnaireProgress", error);
     next(error);
   }
 };
-
 
 
 export const submitQuestionnaire = async (
@@ -235,6 +237,7 @@ export const submitQuestionnaire = async (
     
     res.status(201).json(response);
   } catch (error) {
+    console.error("error in submitQuestionnaire", error);
     next(error);
   }
 };

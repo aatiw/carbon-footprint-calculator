@@ -3,7 +3,6 @@ import {
   calculateFootprint,
   getFootprintDetails,
   generateRecommendations,
-  createScenarios,
   compareWithBenchmarks
 } from '../controllers/analysis.controller.js';
 
@@ -15,7 +14,6 @@ router.get('/footprint/:sessionId', getFootprintDetails);
 
 
 router.post('/recommendations/:sessionId', generateRecommendations);
-router.post('/scenarios/:sessionId', createScenarios);
 
 router.get('/benchmarks/:sessionId', compareWithBenchmarks);
 

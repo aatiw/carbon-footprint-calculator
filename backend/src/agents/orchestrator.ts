@@ -1,6 +1,6 @@
 import { CalculationAgent, type EmissionResult } from './Calculation.agent.js';
 import { AnalysisAgent, type FootprintAnalysis } from './Analysis.agent.js';
-import { RecommendationAgent, type Recommendation, type Scenario } from './recommendation.agent.js';
+import { RecommendationAgent, type Recommendation} from './recommendation.agent.js';
 import { DashboardAgent, type DashboardInsight } from './dashboard.agent.js';
 
 export interface FullFootprintResult {
