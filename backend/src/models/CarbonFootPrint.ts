@@ -46,24 +46,46 @@ export interface ICarbonFootprint extends Document {
     globalTarget: number;
     percentile: number;
   };
-  
-  
+
+  analysis:{
+    insights: Array<{
+      type: string;
+      title: string;
+      description: string;
+      value?: number;
+      category?: string;
+      priority: number;
+    }>;
+    hotspots: Array<{
+      category: string;
+      percentage: number;
+      severity: "low" | "medium" | "high";
+      reason: string;
+    }>;
+    comparisons: {
+      category: string;
+      message: string;
+      percentile: number;
+    };
+  }
+
   recommendations: Array<{
+    id: string;
     category: string;
     action: string;
-    impact: number; // kg CO2e saved per year
-    difficulty: 'easy' | 'medium' | 'hard';
-    priority: number;
-  }>;
-  
-  // Reduction Scenarios
-  scenarios: Array<{
-    name: string;
     description: string;
-    newTotal: number;
-    reduction: number; // percentage
-    actions: string[];
-  }>;
+    impact: {
+      co2Reduction: number;
+      percentage: number;
+      timeframe: string;
+    };
+    difficulty: 'easy' | 'medium' | 'hard';
+    cost: 'free' | 'low' | 'medium' | 'high';
+    priority: number;
+    steps: string[];
+    benefits: string[];
+    considerations: string[];
+  }>
   
   calculatedAt: Date;
 }
@@ -122,26 +144,55 @@ const CarbonFootprintSchema: Schema = new Schema<ICarbonFootprint>({
     percentile: Number
   },
 
+  analysis: {
+    insights: [{
+      type: String,
+      title: String,
+      description: String,
+      value: Number,
+      category: String,
+      priority: Number,
+    }],
+    hotspots: [{
+      category: String,
+      percentage: Number,
+      severity: {
+        type: String,
+        enum: ["low" , "medium" , "high"]
+      },
+      reason: String,
+    }],
+    comparisions: {
+      category: String,
+      message: String,
+      percentile: Number,
+    }
+  },
 
-  recommendations: [{
+
+  recommendations: {
+    id: String,
     category: String,
     action: String,
-    impact: Number,
+    description: String,
+    impact: {
+      co2Reduction: Number,
+      percentage: Number,
+      timeframe: String,
+    },
     difficulty: {
       type: String,
-      enum: ['easy', 'medium', 'hard']
+      enum: ['easy' , 'medium' ,'hard']
     },
-    priority: Number
-  }],
-
-
-  scenarios: [{
-    name: String,
-    description: String,
-    newTotal: Number,
-    reduction: Number,
-    actions: [String]
-  }],
+    cost: {
+      type: String,
+      enum: ['free' , 'low' , 'medium' , 'high']
+    },
+    priority: Number,
+    steps: [String],
+    benefits: [String],
+    considerations: [String]
+  },
 
   
   calculatedAt: { 

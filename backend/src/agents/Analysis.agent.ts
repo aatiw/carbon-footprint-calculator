@@ -20,12 +20,6 @@ export interface FootprintAnalysis {
     message: string;
     percentile: number;
   };
-  goalProgress: {
-    current: number;
-    target: number;
-    progress: number;
-    onTrack: boolean;
-  };
 }
 
 export class AnalysisAgent extends BaseAgent {
@@ -61,7 +55,6 @@ export class AnalysisAgent extends BaseAgent {
       1. Key insights (highest categories, unusual patterns, Positive behaviors to reinforce, Hidden emission sources, Lifestyle-specific recommendations),(return only at max 6 insight)
       2. Emission hotspots (categories requiring attention, return at max 3)
       3. Benchmark comparisons (vs local/national/global targets)
-      4. Goal progress assessment
 
     Return JSON:
     {
@@ -87,12 +80,6 @@ export class AnalysisAgent extends BaseAgent {
         "category": "Climate Hero|Low Impact|Average|High Impact|Very High Impact",
         "message": "Personalized comparison message",
         "percentile": number
-      },
-      "goalProgress": {
-        "current": number,
-        "target": 2000,
-        "progress": number,
-        "onTrack": boolean
       }
     }`;
 
@@ -103,7 +90,6 @@ export class AnalysisAgent extends BaseAgent {
       insights: this.validateInsights(result.insights),
       hotspots: this.validateHotspots(result.hotspots),
       comparisons: result.comparisons,
-      goalProgress: result.goalProgress,
     };
   }
 

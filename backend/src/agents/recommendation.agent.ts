@@ -97,55 +97,6 @@ export class RecommendationAgent extends BaseAgent {
     return this.validateRecommendations(result);
   }
 
-  async createReductionScenarios(
-    footprintData: any,
-    userData: any,
-    recommendations: Recommendation[]
-  ): Promise<Scenario[]> {
-    const prompt = `Create 3-4 realistic carbon reduction scenarios based on:
-
-    Current Footprint:
-    ${JSON.stringify(footprintData, null, 2)}
-
-    User Profile:
-    ${JSON.stringify(userData, null, 2)}
-
-    Available Recommendations:
-    ${JSON.stringify(recommendations, null, 2)}
-
-    Create scenarios with increasing levels of commitment:
-      1. Quick Wins (0-3 months, easy changes)
-      2. Moderate Impact (6-12 months, some lifestyle changes)
-      3. Significant Change (1-2 years, major lifestyle shifts)
-      4. Climate Champion (2+ years, maximum feasible reduction)
-
-    For each scenario:
-      - Select appropriate recommendations
-      - Calculate combined impact
-      - Consider interaction effects
-      - Assess overall feasibility
-
-    Return JSON array:
-    [
-      {
-        "name": "Quick Wins",
-        "description": "Easy changes you can implement immediately",
-        "timeframe": "0-3 months",
-        "newTotal": number, // kg CO2e after changes
-        "reduction": number, // kg CO2e reduced
-        "reductionPercent": number, // percentage reduction
-        "actions": ["Action 1", "Action 2"],
-        "feasibility": number, // 1-10 scale
-        "cost": "free|low|medium|high"
-      }
-    ]`;
-
-    const response = await this.generateResponse(prompt);
-    const result = this.parseJSONResponse(response);
-
-    return this.validateScenarios(result);
-  }
-
   async generateSeasonalRecommendations(
     footprintData: any,
     userData: any,

@@ -57,7 +57,6 @@ export class CalculationAgent extends BaseAgent {
       ${JSON.stringify(energyData, null, 2)}
 
       Consider:
-        - Electricity grid mix for region
         - Heating source efficiency
         - Appliance usage patterns
         - Renewable energy offset

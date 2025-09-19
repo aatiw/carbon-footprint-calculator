@@ -14,7 +14,6 @@ export interface FullFootprintResult {
   };
   analysis: FootprintAnalysis;
   recommendations: Recommendation[];
-  scenarios: Scenario[];
   dashboardInsights: DashboardInsight[];
 }
 
@@ -36,7 +35,6 @@ export class AgentOrchestrator {
     benchmarks: any,
     options: {
       includeRecommendations?: boolean;
-      includeScenarios?: boolean;
       includeDashboard?: boolean;
     } = {}
   ): Promise<FullFootprintResult> {
@@ -68,7 +66,6 @@ export class AgentOrchestrator {
       console.log('Analysis complete');
 
       let recommendations: Recommendation[] = [];
-      let scenarios: Scenario[] = [];
       let dashboardInsights: DashboardInsight[] = [];
 
       if (options.includeRecommendations !== false) {
@@ -79,18 +76,6 @@ export class AgentOrchestrator {
           analysis
         );
         console.log('Recommendations generated:', recommendations.length);
-      }
-
-      
-
-      if (options.includeScenarios !== false && recommendations.length > 0) {
-        console.log('Creating reduction scenarios...');
-        scenarios = await this.recommendationAgent.createReductionScenarios(
-          footprintData,
-          userData,
-          recommendations
-        );
-        console.log('Scenarios created:', scenarios.length);
       }
       
 
@@ -111,7 +96,6 @@ export class AgentOrchestrator {
         emissions,
         analysis,
         recommendations,
-        scenarios,
         dashboardInsights
       };
 

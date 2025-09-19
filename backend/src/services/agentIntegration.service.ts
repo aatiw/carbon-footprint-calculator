@@ -1,5 +1,11 @@
 import { AgentOrchestrator } from '../agents/orchestrator.js';
 
+interface FootprintOptions {
+  includeRecommendations?: boolean;
+  includeScenarios?: boolean;
+  includeDashboard?: boolean;
+}
+
 export class AgentIntegrationService {
   private static instance: AgentIntegrationService;
   private orchestrator: AgentOrchestrator;
@@ -15,15 +21,14 @@ export class AgentIntegrationService {
     return AgentIntegrationService.instance;
   }
   
-  async calculateFootprint(userData: any, benchmarks: any) {
+  async calculateFootprint(userData: any, benchmarks: any, options: FootprintOptions = {}) {
     try {
       const result = await this.orchestrator.processCompleteFootprint(
         userData,
         benchmarks,
         {
-          includeRecommendations: true,
-          includeScenarios: true,
-          includeDashboard: true
+        includeRecommendations: options.includeRecommendations ?? false,
+        includeDashboard: options.includeDashboard ?? false,
         }
       );
 
@@ -34,14 +39,16 @@ export class AgentIntegrationService {
           name,
           value: data.total,
           percentage: (data.total / result.totalEmissions) * 100,
-          subcategories: data
+          subcategories: Object.entries(data.breakdown).map(([subName, subValue]) => ({
+            name: subName,
+            value: subValue as number
+          }))
         })),
         dailyAverage: result.totalEmissions / 365,
         monthlyAverage: result.totalEmissions / 12,
         yearlyTotal: result.totalEmissions,
         analysis: result.analysis,
         recommendations: result.recommendations,
-        scenarios: result.scenarios,
         dashboardInsights: result.dashboardInsights
       };
     } catch (error) {
@@ -68,26 +75,10 @@ export class AgentIntegrationService {
   }
 
   
-  async createReductionScenarios(footprintData: any, userData: any, recommendations?: any[]) {
-    try {
-      const recommendationAgent = this.orchestrator.getRecommendationAgent();
-      
-      if (!recommendations || recommendations.length === 0) {
-        recommendations = await this.generateRecommendations(footprintData, userData);
-      }
-
-      return await recommendationAgent.createReductionScenarios(footprintData, userData, recommendations);
-    } catch (error) {
-      console.error('Scenario creation error:', error);
-      return this.createFallbackScenarios(footprintData.totalEmissions);
-    }
-  }
-
-  
   async generateDashboardInsights(footprintData: any, userData: any, benchmarks: any, historicalData?: any[]) {
     try {
       const dashboardAgent = this.orchestrator.getDashboardAgent();
-      return await dashboardAgent.generateDashboardInsights(footprintData, userData, benchmarks, historicalData);
+      return await dashboardAgent.generateDashboardInsights(footprintData, userData, benchmarks);
     } catch (error) {
       console.error('Dashboard insights error:', error);
       return this.createFallbackInsights(footprintData, benchmarks);

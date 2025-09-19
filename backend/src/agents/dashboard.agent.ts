@@ -34,7 +34,6 @@ export class DashboardAgent extends BaseAgent {
     footprintData: any,
     userData: any,
     benchmarks: any,
-    historicalData?: any[]
   ): Promise<DashboardInsight[]> {
     const prompt = `Generate key dashboard insights for this carbon footprint:
 
