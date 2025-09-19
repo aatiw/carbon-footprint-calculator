@@ -3,8 +3,7 @@ import {
   getDashboardData,
   getChartData,
   exportReport,
-  getReductionPotential,
-  simulateScenario
+  getReductionPotential
 } from '../controllers/dashboard.controller';
 
 const router: Router = express.Router();
@@ -18,6 +17,5 @@ router.get('/export/:sessionId', exportReport);
 
 
 router.get('/reduction-potential/:sessionId', getReductionPotential);
-router.post('/simulate', simulateScenario);
 
 export default router;

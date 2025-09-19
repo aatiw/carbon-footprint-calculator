@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface ICarbonFootprint extends Document {
   sessionId: string;
+  footprintId: string
   
   // Total Emissions (kg CO2e per year)
   totalEmissions: number;
@@ -94,6 +95,11 @@ const CarbonFootprintSchema: Schema = new Schema<ICarbonFootprint>({
   sessionId: { 
     type: String, 
     required: true,
+    index: true 
+  },
+
+  footprintId: {
+    type: String, 
     index: true 
   },
 

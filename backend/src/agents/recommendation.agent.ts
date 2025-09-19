@@ -153,18 +153,4 @@ export class RecommendationAgent extends BaseAgent {
       .slice(0, 15)
       .sort((a, b) => (b.priority || 0) - (a.priority || 0));
   }
-
-  private validateScenarios(scenarios: any[]): Scenario[] {
-    if (!Array.isArray(scenarios)) return [];
-
-    return scenarios
-      .filter(scenario =>
-        scenario.name &&
-        scenario.description &&
-        typeof scenario.newTotal === 'number' &&
-        typeof scenario.reduction === 'number' &&
-        Array.isArray(scenario.actions)
-      )
-      .slice(0, 4);
-  }
 }

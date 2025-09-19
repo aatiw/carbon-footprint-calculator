@@ -3,6 +3,7 @@ import User from '../models/User';
 import CarbonFootprint from '../models/CarbonFootPrint.js';
 import type { ApiResponse, CarbonCalculationResult } from '../types';
 import { AgentIntegrationService } from '../services/agentIntegration.service';
+import {v4 as uuidv4 } from 'uuid';
 import type { FootprintAnalysis } from '../agents/Analysis.agent';
 import type { DashboardInsight } from '../agents/dashboard.agent';
 
@@ -49,9 +50,12 @@ export const calculateFootprint = async (
     };
     
     const aiResult = await agentService.calculateFootprint(user, benchmarks, options);
+
+    const footprintId = uuidv4();
     
     const footprint = new CarbonFootprint({
       sessionId,
+      footprintId,
       totalEmissions: aiResult.totalEmissions,
       emissions: {
         transportation: aiResult.categories.find(c => c.name === 'transportation')?.subcategories || { total: 0 },

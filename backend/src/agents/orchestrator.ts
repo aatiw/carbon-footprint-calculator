@@ -106,74 +106,6 @@ export class AgentOrchestrator {
   }
 
 
-
-
-  async recalculateWithChanges(
-    originalData: any,
-    changes: any,
-    userData: any
-  ): Promise<{ original: number; modified: number; reduction: number; reductionPercent: number }> {
-    try {
-      console.log('Recalculating footprint with changes...');
-
-      const modifiedUserData = this.applyChangesToUserData(userData, changes);
-      
-      const region = userData.location?.country || 'global';
-      const affectedCategories = Object.keys(changes);
-      const newEmissions = { ...originalData.emissions };
-
-
-
-      for (const category of affectedCategories) {
-        switch (category) {
-          case 'transportation':
-            newEmissions.transportation = await this.calculationAgent.calculateTransportationEmissions(
-              modifiedUserData.transportation, region
-            );
-            break;
-          case 'homeEnergy':
-            newEmissions.homeEnergy = await this.calculationAgent.calculateHomeEnergyEmissions(
-              modifiedUserData.homeEnergy, region
-            );
-            break;
-          case 'food':
-            newEmissions.food = await this.calculationAgent.calculateFoodEmissions(
-              modifiedUserData.foodDiet, region
-            );
-            break;
-          case 'water':
-            newEmissions.water = await this.calculationAgent.calculateWaterEmissions(
-              modifiedUserData.waterUsage, region
-            );
-            break;
-          case 'shopping':
-            newEmissions.shopping = await this.calculationAgent.calculateShoppingEmissions(
-              modifiedUserData.shopping, region
-            );
-            break;
-        }
-      }
-
-      const newTotal = Object.values(newEmissions).reduce((sum, category) => sum + (category as any).total, 0);
-      const reduction = originalData.totalEmissions - (newTotal as number);
-      const reductionPercent = (reduction / originalData.totalEmissions) * 100;
-
-      console.log('Recalculation complete:', { original: originalData.totalEmissions, modified: newTotal, reduction });
-
-      return {
-        original: originalData.totalEmissions,
-        // @ts-ignore
-        modified: newTotal,
-        reduction,
-        reductionPercent
-      };
-
-    } catch (error) {
-      console.error('Error in recalculation:', error);
-      throw new Error(`Failed to recalculate footprint: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    }
-  }
-
   async generateDashboardData(
     footprintData: any,
     userData: any,
@@ -191,24 +123,6 @@ export class AgentOrchestrator {
       throw new Error(`Failed to generate dashboard data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
-
-  private applyChangesToUserData(userData: any, changes: any): any {
-    const modified = JSON.parse(JSON.stringify(userData));
-
-    Object.entries(changes).forEach(([category, categoryChanges]: [string, any]) => {
-      if (modified[category]) {
-        Object.entries(categoryChanges).forEach(([field, value]) => {
-          if (modified[category][field] !== undefined) {
-            modified[category][field] = value;
-          }
-        });
-      }
-    });
-
-    return modified;
-  }
-  
-
 
   getCalculationAgent(): CalculationAgent {
     return this.calculationAgent;

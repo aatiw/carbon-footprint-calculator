@@ -2,6 +2,10 @@ import type { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import CarbonFootprint from '../models/CarbonFootPrint.js';
 import type { ApiResponse } from '../types';
+import { AgentIntegrationService } from '../services/agentIntegration.service';
+import DashboardData from '../models/DashboardData';
+
+const agentService = AgentIntegrationService.getInstance();
 
 
 export const getDashboardData = async (
@@ -12,7 +16,7 @@ export const getDashboardData = async (
   try {
     const { sessionId } = req.params;
     
-    // Fetch user and latest footprint data
+    
     const [user, footprint] = await Promise.all([
       User.findOne({ sessionId }),
       CarbonFootprint.findOne({ sessionId }).sort({ calculatedAt: -1 })
@@ -36,10 +40,16 @@ export const getDashboardData = async (
       return;
     }
     
-    // Calculate additional insights
-    const insights = generateDashboardInsights(footprint, user);
+    
+    const benchmarks = footprint.comparisons;
+    const footprintData = {
+      totalEmissions: footprint.totalEmissions,
+      emissions: footprint.emissions
+    };
+
+    const insights = await agentService.generateDashboardInsights(footprintData, user, benchmarks);
+
     const goals = calculateGoalProgress(footprint);
-    const trends = await calculateTrends(sessionId!);
     
     const dashboardData = {
       user: {
@@ -61,11 +71,16 @@ export const getDashboardData = async (
       },
       comparisons: footprint.comparisons,
       recommendations: footprint.recommendations || [],
-      scenarios: footprint.scenarios || [],
       insights,
       goals,
-      trends
     };
+
+    await DashboardData.create({
+      sessionId,
+      footprintId: footprint._id,
+      goals,
+      dashboardInsights: insights,
+    });
     
     const response: ApiResponse = {
       success: true,
@@ -76,11 +91,12 @@ export const getDashboardData = async (
     
     res.json(response);
   } catch (error) {
+    console.error('Error in getDashboardData:', error);
     next(error);
   }
 };
 
-// Get chart data for specific chart type
+
 export const getChartData = async (
   req: Request,
   res: Response,
@@ -100,36 +116,41 @@ export const getChartData = async (
       });
       return;
     }
+
+    const footprintData = {
+      totalEmissions: footprint.totalEmissions,
+      emissions: footprint.emissions
+    };
     
     let chartData;
     
-    switch (chartType) {
-      case 'pie':
-        chartData = generatePieChartData(footprint);
-        break;
-      case 'bar':
-        chartData = generateBarChartData(footprint);
-        break;
-      case 'waterfall':
-        chartData = generateWaterfallChartData(footprint);
-        break;
-      case 'comparison':
-        chartData = generateComparisonChartData(footprint);
-        break;
-      case 'trends':
-        chartData = await generateTrendsChartData(sessionId!);
-        break;
-      case 'scenarios':
-        chartData = generateScenariosChartData(footprint);
-        break;
-      default:
-        res.status(400).json({
-          success: false,
-          error: 'Invalid chart type',
-          timestamp: new Date().toISOString()
-        });
-        return;
+    if (['pie', 'bar', 'waterfall', 'comparison', 'scenarios'].includes(chartType!)) {
+      chartData = await agentService.generateChartData(footprintData, chartType!);
+    } else if (chartType === 'trends') {
+      chartData = await generateTrendsChartData(sessionId!);
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'Invalid chart type',
+        timestamp: new Date().toISOString()
+      });
+      return;
     }
+
+    await DashboardData.findOneAndUpdate(
+      { sessionId, footprintId: footprint._id },
+      {
+        $set: {
+          chartType: {
+            type: chartType,
+            data: chartData.data || chartData,
+            options: chartData.options || {},
+            insights: chartData.insights || [],
+          } 
+        }
+      },
+      { upsert: true, new: true }
+    );
     
     const response: ApiResponse = {
       success: true,
@@ -143,7 +164,7 @@ export const getChartData = async (
   }
 };
 
-// Export dashboard report
+
 export const exportReport = async (
   req: Request,
   res: Response,
@@ -191,7 +212,6 @@ export const exportReport = async (
         globalTarget: footprint.comparisons.globalTarget
       },
       recommendations: footprint.recommendations?.slice(0, 5) || [],
-      scenarios: footprint.scenarios || []
     };
     
     // TODO: Implement PDF/CSV generation based on format
@@ -214,11 +234,12 @@ export const exportReport = async (
       });
     }
   } catch (error) {
+    console.error('Error exporting report:', error);
     next(error);
   }
 };
 
-// Get reduction potential analysis
+
 export const getReductionPotential = async (
   req: Request,
   res: Response,
@@ -227,19 +248,29 @@ export const getReductionPotential = async (
   try {
     const { sessionId } = req.params;
     
-    const footprint = await CarbonFootprint.findOne({ sessionId })
-      .sort({ calculatedAt: -1 });
+    const [user, footprint] = await Promise.all([
+      User.findOne({ sessionId }),
+      CarbonFootprint.findOne({ sessionId }).sort({ calculatedAt: -1 })
+    ]);
     
-    if (!footprint) {
+    if (!footprint || !user) {
       res.status(404).json({
         success: false,
-        error: 'Footprint data not found',
+        error: 'Required data not found',
         timestamp: new Date().toISOString()
       });
       return;
     }
+
+    const footprintData = {
+      totalEmissions: footprint.totalEmissions,
+      emissions: footprint.emissions
+    };
     
-    const reductionPotential = calculateReductionPotential(footprint);
+    const reductionPotential = await agentService.calculateReductionPotential(
+      footprintData, 
+      user
+    );
     
     const response: ApiResponse = {
       success: true,
@@ -250,124 +281,12 @@ export const getReductionPotential = async (
     
     res.json(response);
   } catch (error) {
-    next(error);
-  }
-};
-
-// Simulate custom scenario
-export const simulateScenario = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { sessionId, changes } = req.body;
-    
-    if (!sessionId || !changes) {
-      res.status(400).json({
-        success: false,
-        error: 'Missing required fields',
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-    
-    const [user, footprint] = await Promise.all([
-      User.findOne({ sessionId }),
-      CarbonFootprint.findOne({ sessionId }).sort({ calculatedAt: -1 })
-    ]);
-    
-    if (!user || !footprint) {
-      res.status(404).json({
-        success: false,
-        error: 'Required data not found',
-        timestamp: new Date().toISOString()
-      });
-      return;
-    }
-    
-    // Apply changes to simulate new footprint
-    const simulatedFootprint = applyScenarioChanges(footprint, changes);
-    const reduction = footprint.totalEmissions - simulatedFootprint.totalEmissions;
-    const reductionPercent = (reduction / footprint.totalEmissions) * 100;
-    
-    const simulation = {
-      original: footprint.totalEmissions,
-      simulated: simulatedFootprint.totalEmissions,
-      reduction,
-      reductionPercent: Math.round(reductionPercent),
-      changes,
-      newCategory: getCarbonCategory(simulatedFootprint.totalEmissions),
-      breakdown: Object.entries(simulatedFootprint.emissions).map(([name, data]: [string, any]) => ({
-        category: name,
-        original: footprint.emissions[name].total,
-        simulated: data.total,
-        change: footprint.emissions[name].total - data.total
-      }))
-    };
-    
-    const response: ApiResponse = {
-      success: true,
-      data: simulation,
-      message: 'Scenario simulated successfully',
-      timestamp: new Date().toISOString()
-    };
-    
-    res.json(response);
-  } catch (error) {
+    console.error('Error calculating reduction potential:', error);
     next(error);
   }
 };
 
 // Helper functions
-function generateDashboardInsights(footprint: any, user: any): any {
-  const insights = [];
-  
-  // Highest category insight
-  const categories = Object.entries(footprint.emissions);
-  const highest = categories.reduce((max, [name, data]: [string, any]) => 
-    data.total > max.value ? { name, value: data.total } : max, 
-    { name: '', value: 0 }
-  );
-  
-  insights.push({
-    type: 'highest_category',
-    title: `${highest.name} is your largest contributor`,
-    description: `Accounting for ${Math.round((highest.value / footprint.totalEmissions) * 100)}% of your footprint`,
-    value: highest.value,
-    category: highest.name
-  });
-  
-  // Comparison insight
-  const comparison = footprint.comparisons;
-  if (footprint.totalEmissions < comparison.globalTarget) {
-    insights.push({
-      type: 'below_target',
-      title: 'You\'re below the global target!',
-      description: `Your footprint is ${Math.round(((comparison.globalTarget - footprint.totalEmissions) / comparison.globalTarget) * 100)}% below the 2-ton target`,
-      value: comparison.globalTarget - footprint.totalEmissions
-    });
-  } else {
-    insights.push({
-      type: 'above_target',
-      title: 'Room for improvement',
-      description: `You're ${Math.round(((footprint.totalEmissions - comparison.globalTarget) / comparison.globalTarget) * 100)}% above the global target`,
-      value: footprint.totalEmissions - comparison.globalTarget
-    });
-  }
-  
-  // Household size insight
-  const perPersonEmissions = footprint.totalEmissions / (user.householdSize || 1);
-  insights.push({
-    type: 'per_person',
-    title: 'Per person footprint',
-    description: `${Math.round(perPersonEmissions)} kg CO₂e per person in your household`,
-    value: perPersonEmissions
-  });
-  
-  return insights;
-}
-
 function calculateGoalProgress(footprint: any): any {
   const globalTarget = 2000; // 2 tons CO2e per year
   const current = footprint.totalEmissions;
@@ -378,79 +297,6 @@ function calculateGoalProgress(footprint: any): any {
     progress: Math.min((globalTarget / current) * 100, 100),
     remaining: Math.max(current - globalTarget, 0),
     achieved: current <= globalTarget
-  };
-}
-
-async function calculateTrends(sessionId: string): Promise<any> {
-  // Get historical footprints for trends (if any)
-  const footprints = await CarbonFootprint.find({ sessionId })
-    .sort({ calculatedAt: -1 })
-    .limit(12); // Last 12 calculations
-  
-  if (footprints.length < 2) {
-    return {
-      available: false,
-      message: 'Not enough data for trends'
-    };
-  }
-}
-
-function generatePieChartData(footprint: any): any {
-  return {
-    labels: Object.keys(footprint.emissions),
-    datasets: [{
-      data: Object.values(footprint.emissions).map((category: any) => category.total),
-      backgroundColor: [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'
-      ],
-      borderWidth: 2
-    }]
-  };
-}
-
-function generateBarChartData(footprint: any): any {
-  return {
-    labels: Object.keys(footprint.emissions),
-    datasets: [{
-      label: 'Emissions (kg CO₂e)',
-      data: Object.values(footprint.emissions).map((category: any) => category.total),
-      backgroundColor: '#36A2EB',
-      borderColor: '#1E88E5',
-      borderWidth: 1
-    }]
-  };
-}
-
-function generateWaterfallChartData(footprint: any): any {
-  const categories = Object.entries(footprint.emissions);
-  return {
-    labels: [...categories.map(([name]) => name), 'Total'],
-    datasets: [{
-      label: 'Cumulative Emissions',
-      data: categories.reduce((acc: number[], [, data]: [string, any], index) => {
-        const prev = index === 0 ? 0 : acc[index - 1];
-        acc.push(prev + data.total);
-        return acc;
-      }, []).concat([footprint.totalEmissions]),
-      backgroundColor: '#4BC0C0'
-    }]
-  };
-}
-
-function generateComparisonChartData(footprint: any): any {
-  return {
-    labels: ['Your Footprint', 'Local Average', 'National Average', 'Global Target'],
-    datasets: [{
-      label: 'Emissions (kg CO₂e)',
-      data: [
-        footprint.totalEmissions,
-        footprint.comparisons.localAverage,
-        footprint.comparisons.nationalAverage,
-        footprint.comparisons.globalTarget
-      ],
-      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
-      borderWidth: 1
-    }]
   };
 }
 
@@ -474,88 +320,6 @@ async function generateTrendsChartData(sessionId: string): Promise<any> {
       tension: 0.4
     }]
   };
-}
-
-function generateScenariosChartData(footprint: any): any {
-  if (!footprint.scenarios || footprint.scenarios.length === 0) {
-    return { message: 'No scenarios available' };
-  }
-  
-  const scenarios = footprint.scenarios;
-  return {
-    labels: ['Current', ...scenarios.map((s: any) => s.name)],
-    datasets: [{
-      label: 'Emissions (kg CO₂e)',
-      data: [footprint.totalEmissions, ...scenarios.map((s: any) => s.newTotal)],
-      backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0'],
-      borderWidth: 1
-    }]
-  };
-}
-
-function calculateReductionPotential(footprint: any): any {
-  const categories = Object.entries(footprint.emissions);
-  
-  return categories.map(([name, data]: [string, any]) => {
-    let maxReduction = 0;
-    let actions = [];
-    
-    switch (name) {
-      case 'transportation':
-        maxReduction = data.total * 0.8; // 80% reduction possible
-        actions = ['Switch to electric vehicle', 'Use public transport', 'Work from home'];
-        break;
-      case 'homeEnergy':
-        maxReduction = data.total * 0.7; // 70% reduction possible
-        actions = ['Switch to renewable energy', 'Improve insulation', 'Energy-efficient appliances'];
-        break;
-      case 'food':
-        maxReduction = data.total * 0.6; // 60% reduction possible
-        actions = ['Plant-based diet', 'Reduce food waste', 'Local sourcing'];
-        break;
-      case 'water':
-        maxReduction = data.total * 0.5; // 50% reduction possible
-        actions = ['Shorter showers', 'Water-efficient fixtures', 'Reduce hot water use'];
-        break;
-      case 'shopping':
-        maxReduction = data.total * 0.7; // 70% reduction possible
-        actions = ['Buy less', 'Choose durable goods', 'Repair instead of replace'];
-        break;
-      default:
-        maxReduction = data.total * 0.3;
-        actions = ['General reduction measures'];
-    }
-    
-    return {
-      category: name,
-      current: data.total,
-      maxReduction,
-      potential: Math.round(((maxReduction / data.total) * 100)),
-      actions
-    };
-  });
-}
-
-function applyScenarioChanges(footprint: any, changes: any): any {
-  const newFootprint = JSON.parse(JSON.stringify(footprint));
-  
-  Object.entries(changes).forEach(([category, reduction]: [string, any]) => {
-    if (newFootprint.emissions[category]) {
-      const reductionAmount = typeof reduction === 'number' 
-        ? reduction 
-        : newFootprint.emissions[category].total * (reduction.percentage / 100);
-      
-      newFootprint.emissions[category].total = Math.max(
-        0, 
-        newFootprint.emissions[category].total - reductionAmount
-      );
-    }
-  });
-  
-  newFootprint.totalEmissions = Object.values(newFootprint.emissions)
-    .reduce((sum: number, category: any) => sum + category.total, 0);
-  
-  return newFootprint;
 }
 
 function getCarbonCategory(emissions: number): string {

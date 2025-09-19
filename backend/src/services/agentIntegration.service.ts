@@ -95,15 +95,6 @@ export class AgentIntegrationService {
     }
   }
   
-  async simulateScenarioChanges(footprintData: any, userData: any, changes: any) {
-    try {
-      return await this.orchestrator.recalculateWithChanges(footprintData, changes, userData);
-    } catch (error) {
-      console.error('Scenario simulation error:', error);
-      throw error;
-    }
-  }
-  
   async generateChartData(footprintData: any, chartType: string) {
     try {
       const dashboardAgent = this.orchestrator.getDashboardAgent();
